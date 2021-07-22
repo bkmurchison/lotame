@@ -8,7 +8,7 @@ setup(name='lotame',
       version='2.0.0',
       description='Simple python wrapper for LOTAME API',
       install_requires=[
-          'httplib2==0.10.3',
+          'httplib2==0.19.0',
           'urllib3>=1.23',
           'requests==2.21.0'
       ],
