@@ -15,11 +15,269 @@ import os
 import requests
 import time
 from urllib.parse import urlencode
+import sys
+import json
+import configparser
+from datetime import datetime, timedelta
+from os.path import expanduser
 
 
-class Audience(object):
-    """Audience related code.
+class Credentials(object):
+    DEFAULT_BASE_URL = 'https://api.lotame.com/2'
+
+    def __init__(self, client_id, token, access, base_url=None):
+
+        if not client_id or not token or not access:
+            raise Exception(
+                "Missing credentials. All client_id, token and access are "
+                "required.")
+        self.token = token
+        self.access = access or os.getenv('LOTAME_ACCESS_KEY')
+        self.base_url = base_url or Credentials.DEFAULT_BASE_URL
+        self.client_id = client_id
+
+
+class Api(object):
     """
+    # Api Class
+    #   Imports credentials using Credentials Class
+    #   Utilizes stored credentials to authenticate requests to Lotame Api
+    #   Provides helper methods for service authentication and api actions
+    """
+    # static class variables
+    REQUEST_GET = "REQUEST_GET"
+    REQUEST_POSTBODY = "REQUEST_POSTBODY"
+    REQUEST_POST = "REQUEST_POST"
+    REQUEST_PUT = "REQUEST_PUT"
+    REQUEST_DELETE = "REQUEST_DELETE"
+    DEFAULT_PYTHON_HEADER = {
+        "Content-type": "application/x-www-form-urlencoded",
+        "Accept": "text/plain",
+        "User-Agent": "python"
+    }
+    DEFAULT_JSON_RECEIVE_HEADER = {'Accept': 'application/json'}
+    DEFAULT_JSON_SEND_HEADER = {
+        'Content-type': 'application/json', 'Accept': 'application/json'}
+
+    # initialization method
+    # allows specification of custom properties file and profile
+    # allows passing authentication parameters directly in lieu of properties file
+    def __init__(self, credentials=None):
+        if credentials is None:
+            credentials = Credentials()
+        self.credentials = credentials
+
+    def populateUrlParams(self, url="", key="", val=""):
+        if "?" not in url:
+            url = url + "?" + str(key) + "=" + str(val)
+        else:
+            url = url + "&" + str(key) + "=" + str(val)
+        return url
+
+    def buildUrl(self, service="", params={}, auto_assign_client_id=True):
+        if service == "":
+            return ""
+        url = self.credentials.base_url + service
+        if auto_assign_client_id is True:
+            url = url + "?client_id=" + str(self.credentials.client_id)
+        for key, val in params.items():
+            if isinstance(val, list):
+                for v in val:
+                    url = self.populateUrlParams(url, key, v)
+            else:
+                url = self.populateUrlParams(url, key, val)
+        return url
+
+    def mergeHeaders(self, base_headers):
+        headers = {}
+        headers.update(base_headers)
+        auth_headers = {
+            'x-lotame-token': self.credentials.token,
+            'x-lotame-access': self.credentials.access
+        }
+        headers.update(auth_headers)
+        return(headers)
+
+    def performRequest(
+            self, service="", user=None, access=None, type=None, headers=None,
+            body=None):
+        response = ""
+        full_headers = self.mergeHeaders(headers)
+        if type == self.REQUEST_GET:
+            response = requests.get(service, headers=full_headers)
+        elif type == self.REQUEST_POSTBODY:
+            response = requests.post(
+                service, data=json.dumps(body), headers=full_headers)
+        elif type == self.REQUEST_POST:
+            response = requests.post(service, headers=full_headers)
+        elif type == self.REQUEST_PUT:
+            response = requests.put(
+                service, data=json.dumps(body), headers=full_headers)
+        elif type == self.REQUEST_DELETE:
+            response = requests.delete(service, headers=full_headers)
+        else:
+            response = "Invalid request type"
+        return response
+
+    def get(self, service, user=None, access=None):
+        # print("GET request " + service)
+        return self.performRequest(
+            service=service,
+            user=user,
+            access=access,
+            type=self.REQUEST_GET,
+            headers=self.DEFAULT_JSON_RECEIVE_HEADER
+        ).json()
+
+    def postBody(self, service="", body="", user=None, access=None):
+        # print("POST request: " + service)
+        # print("body: " + str(body))
+        return self.performRequest(
+            service=service,
+            user=user,
+            access=access,
+            type=self.REQUEST_POSTBODY,
+            headers=self.DEFAULT_JSON_SEND_HEADER,
+            body=body
+        ).json()
+
+    def post(self, service="", user=None, access=None):
+        # print("POST request: " + service)
+        return self.performRequest(
+            service=service,
+            user=user,
+            access=access,
+            type=self.REQUEST_POST,
+            headers=self.DEFAULT_JSON_SEND_HEADER
+        ).json()
+
+    def put(self, service="", body="", user=None, access=None):
+        # print("POST request: " + service)
+        # print("body: " + str(body))
+        return self.performRequest(
+            service=service,
+            user=user,
+            access=access,
+            type=self.REQUEST_PUT,
+            headers=self.DEFAULT_JSON_SEND_HEADER,
+            body=body
+        ).json()
+
+    def delete(self, service="", user=None, access=None):
+        # print("DELETE request: " + service)
+        return self.performRequest(
+            service=service,
+            user=user,
+            access=access,
+            type=self.REQUEST_DELETE,
+            headers=self.DEFAULT_JSON_RECEIVE_HEADER
+        ).json()
+
+
+class FirehoseService(object):
+    """
+    # FirehoseService Class
+    #   Provides helper methods for the Lotame API firehose service
+    """
+    # statics
+    FIREHOSE_FEEDS = "/firehose/feeds"
+    FIREHOSE_UPDATES = "/firehose/updates"
+    DEFAULT_HOURS = 24
+    DEFAULT_MINUTES = 0
+    DEFAULT_UTC = 0
+    FEED_ID = "feed_id"
+
+    def __init__(self, api=None):
+        if api is None:
+            api = Api()
+        self.api = api
+
+    def getFeeds(self, params={}):
+        url = self.api.buildUrl(self.FIREHOSE_FEEDS, params)
+        feeds_response = self.api.get(url)
+        feeds = []
+        for feed_json in feeds_response['feeds']:
+            feeds.append(feed_json)
+        return feeds
+
+    def getUpdatesForFeed(self, feed_id=0, params={}):
+        if params == {}:
+            params = {self.FEED_ID: feed_id}
+        else:
+            params[self.FEED_ID] = feed_id
+        url = self.api.buildUrl(self.FIREHOSE_UPDATES, params)
+        feed_updates_response = self.api.get(url)
+        return feed_updates_response
+
+    def getUpdatesForFeeds(self, feeds=[], params={}):
+        feeds_updates_responses = []
+        for feed in feeds:
+            feeds_updates_responses.append(
+                self.getUpdatesForFeed(feed['id'], params))
+        return feeds_updates_responses
+
+    def getUpdates(self, hours=DEFAULT_HOURS, minutes=DEFAULT_MINUTES, since=DEFAULT_UTC):
+        params = {}
+        if since:
+            since_utc = str(int(round(since)))
+        elif hours or minutes:
+            since_utc = str(int(round(
+                ((datetime.utcnow() - timedelta(
+                    hours=hours, minutes=minutes)) - datetime(1970, 1, 1)).total_seconds())))
+            params = {"since": since_utc}
+        feeds = self.getFeeds()
+        updates = self.getUpdatesForFeeds(feeds, params)
+        return updates
+
+
+class BehaviorService(object):
+    """
+    # BehaviorService Class
+    #   Provides helper methods for the Lotame API behavior service
+    """
+    # statics
+    BEHAVIOR_SERVICE = "/behaviors"
+
+    def __init__(self, api=None):
+        if api is None:
+            api = Api()
+        self.api = api
+
+    def get(self, behavior=""):
+        url = self.api.buildUrl(
+            self.BEHAVIOR_SERVICE + "/" + str(behavior), {}, False)
+        behavior = self.api.get(url)
+        return behavior
+
+    def getList(self, params={}):
+        url = self.api.buildUrl(self.BEHAVIOR_SERVICE, params)
+        behavior_list = self.api.get(url)
+        return behavior_list
+
+
+class AudienceService(object):
+    """
+    # AudienceService Class
+    #   Provides helper methods for the Lotame API audience service
+    """
+    # statics
+    AUDIENCE_SERVICE = "/audiences"
+
+    def __init__(self, api=None):
+        if api is None:
+            api = Api()
+        self.api = api
+
+    def get(self, audience=""):
+        url = self.api.buildUrl(
+            self.AUDIENCE_SERVICE + "/" + str(audience), {}, False)
+        audience = self.api.get(url)
+        return audience
+
+    def getList(self, params={}):
+        url = self.api.buildUrl(self.AUDIENCE_SERVICE, params)
+        audience_list = self.api.get(url)
+        return audience_list
 
     def get_create_audience_json(
             self, audience_name, client_id, behavior_groups, description='',
@@ -96,147 +354,3 @@ class Audience(object):
         if description:
             definition['description'] = description
         return definition
-
-
-class Lotame(Audience):
-    """Main class for handling low level operations.
-    For endpoint specific code, please create classes above,
-    drop the code there and extend the class as mixin.
-    """
-    API_URL = 'https://api.lotame.com/2'
-    AUTH_URL = 'https://crowdcontrol.lotame.com/auth/v1/tickets'
-    MAX_RETRIES = 10
-
-    def __init__(self, username='', password='', debug=False):
-        self._debug = debug
-        self._username = username or os.getenv('LOTAME_USERNAME')
-        self._password = password or os.getenv('LOTAME_PASSWORD')
-
-    def _retry_request_decorator(max_retries):
-        def _retry_request_sub_decorator(request):
-            @wraps(request)
-            def wrapper(*args, **kargs):
-                status_code = ''
-                fib_num_a = 1
-                fib_num_b = 1
-                retry = 0
-                response = request(*args, **kargs)
-                status_code = response.status_code
-
-                while (status_code == '' or status_code == 500) and retry <= max_retries:
-                    response = request(*args, **kargs)
-                    status_code = response.status_code
-                    new_interval = fib_num_b + fib_num_a
-                    fib_num_a = fib_num_b
-                    time.sleep(new_interval)
-                    fib_num_b = new_interval
-                    retry += 1
-
-                if retry > max_retries:
-                    raise Exception(
-                        'Maximum retries exceeded. Response object '
-                        'dump: {}'.format(
-                            response))
-                return response
-
-            return wrapper
-
-        return _retry_request_sub_decorator
-
-    @contextmanager
-    def _authenticate(self):
-        """Authenticate user and get TGT (Ticket granting ticket).
-        """
-        res = requests.post(self.AUTH_URL, data={
-            'username': self._username,
-            'password': self._password
-        })
-        assert (
-            'location' in res.headers and res.headers['location']
-        ), 'Authentication Failed!'
-        tgt = res.headers['location']
-        yield tgt
-        requests.delete(tgt)
-
-    def _get_service_ticket_token(self, tgt, end_point):
-        """Get TGT ticket token for an end_point.
-
-        Args:
-            tgt (str): tgt from authentication response.
-            end_point (str): desired end point.
-        Returns:
-            Ticket token: ticket token generated.
-        """
-        return requests.post(
-            tgt, data={
-                'service': '{}/{}'.format(self.API_URL, end_point)
-            }).text
-
-    @_retry_request_decorator(MAX_RETRIES)
-    def get(self, end_point, **params):
-        """Make GET request with params with ticket token sent along.
-
-        Args:
-            end_point (str): desired endpoint.
-            params (dict): available params for that endpoint.
-        Returns:
-            Response object.
-        """
-        with self._authenticate() as tgt:
-            end_point_with_params = end_point
-            if len(params) > 0:
-                end_point_with_params = '{}?{}'.format(
-                    end_point, urlencode(params))
-
-            service_ticket = self._get_service_ticket_token(
-                tgt, end_point_with_params)
-            ticket_param = '&ticket={}'.format(service_ticket)
-            if end_point_with_params.find('?') == -1:
-                ticket_param = '?ticket={}'.format(service_ticket)
-            if self._debug:
-                print('{}/{}{}'.format(
-                    self.API_URL,
-                    end_point_with_params, ticket_param))
-
-            print('{}/{}{}'.format(self.API_URL, end_point_with_params,
-                                   ticket_param))
-            return requests.get(
-                '{}/{}{}'.format(self.API_URL, end_point_with_params,
-                                 ticket_param))
-
-    @_retry_request_decorator(MAX_RETRIES)
-    def post(self, end_point, params):
-        """Make POST request with params with ticket token sent along.
-
-        Args:
-            end_point (str): desired endpoint.
-            params (dict): available params for that endpoint.
-        Returns:
-            Response object
-        """
-        with self._authenticate() as tgt:
-            service_ticket = self._get_service_ticket_token(tgt, end_point)
-            if self._debug:
-                print(params)
-                print('{}/{}?ticket={}'.format(
-                    self.API_URL, end_point, service_ticket))
-
-            return requests.post(
-                '{}/{}?ticket={}'.format(
-                    self.API_URL, end_point, service_ticket), json=params)
-
-    def delete(self, end_point):
-        """Make DELETE request with ticket token sent along.
-
-        *Note that there is no decorator for retry, for safety reason.
-
-        Args:
-            end_point (str): desired endpoint.
-        Returns:
-            Response object
-        """
-        with self._authenticate() as tgt:
-            service_ticket = self._get_service_ticket_token(tgt, end_point)
-            response = requests.delete('{}/{}?ticket={}'.format(
-                self.API_URL, end_point, service_ticket))
-            return response
