@@ -30,10 +30,12 @@ Code sample
   api = Api(Credentials(client_id='xxx', token='yyy', access='zzz'))
 
 .. code:: python
+
   fs = FirehoseService(api=api)
   updates = fs.getUpdates(hours=1)
 
 .. code:: python
+
   b = BehaviorService(api=api)
   b.get('types')
 
