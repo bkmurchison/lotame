@@ -1,5 +1,10 @@
+.vscode
+.idea
 build/
 dist/
 lotame.egg-info/
 lotame/__pycache__/
 tests/__pycache__/
+
+.coverage
+.python-version
