@@ -4,37 +4,30 @@ Python Lotame API wrapper.
 Filename: lotame.py
 Author: Paulo Kuong
 Email: pkuong80@gmail.com
-Python Version: 3.6.1
+Python Version: 3.6.1+
 
 Please refer to https://api.lotame.com/docs/#/ to get all Endpoints.
 Please refer to README for examples.
 """
-from contextlib import contextmanager
-from functools import wraps
-import os
-import requests
-import time
-from urllib.parse import urlencode
-import sys
 import json
-import configparser
 from datetime import datetime, timedelta
-from os.path import expanduser
+
+import requests
 
 
 class Credentials(object):
     DEFAULT_BASE_URL = 'https://api.lotame.com/2'
 
-    def __init__(self, client_id, token, access, base_url=None):
+    def __init__(self, client_id=None, token=None, access=None, base_url=None):
 
         if not client_id or not token or not access:
             raise Exception(
                 "Missing credentials. All client_id, token and access are "
                 "required.")
-        self.token = token
-        self.access = access or os.getenv('LOTAME_ACCESS_KEY')
-        self.base_url = base_url or Credentials.DEFAULT_BASE_URL
         self.client_id = client_id
+        self.token = token
+        self.access = access
+        self.base_url = base_url or Credentials.DEFAULT_BASE_URL
 
 
 class Api(object):
@@ -67,13 +60,7 @@ class Api(object):
             credentials = Credentials()
         self.credentials = credentials
 
-    def populateUrlParams(self, url="", key="", val=""):
-        if "?" not in url:
-            url = url + "?" + str(key) + "=" + str(val)
-        else:
-            url = url + "&" + str(key) + "=" + str(val)
-        return url
-
+    # TODO: this needs to be made 'private' and invoked with _perform_request
     def buildUrl(self, service="", params={}, auto_assign_client_id=True):
         if service == "":
             return ""
@@ -83,12 +70,20 @@ class Api(object):
         for key, val in params.items():
             if isinstance(val, list):
                 for v in val:
-                    url = self.populateUrlParams(url, key, v)
+                    url = self._populate_url_params(url, key, v)
             else:
-                url = self.populateUrlParams(url, key, val)
+                url = self._populate_url_params(url, key, val)
         return url
 
-    def mergeHeaders(self, base_headers):
+    @staticmethod
+    def _populate_url_params(url="", key="", val=""):
+        if "?" not in url:
+            url = url + "?" + str(key) + "=" + str(val)
+        else:
+            url = url + "&" + str(key) + "=" + str(val)
+        return url
+
+    def _merge_headers(self, base_headers):
         headers = {}
         headers.update(base_headers)
         auth_headers = {
@@ -96,13 +91,12 @@ class Api(object):
             'x-lotame-access': self.credentials.access
         }
         headers.update(auth_headers)
-        return(headers)
+        return headers
 
-    def performRequest(
+    def _perform_request(
             self, service="", user=None, access=None, type=None, headers=None,
             body=None):
-        response = ""
-        full_headers = self.mergeHeaders(headers)
+        full_headers = self._merge_headers(headers)
         if type == self.REQUEST_GET:
             response = requests.get(service, headers=full_headers)
         elif type == self.REQUEST_POSTBODY:
@@ -115,13 +109,12 @@ class Api(object):
                 service, data=json.dumps(body), headers=full_headers)
         elif type == self.REQUEST_DELETE:
             response = requests.delete(service, headers=full_headers)
-        else:
+        else:  # TODO: this should no longer happen, probably preferable to raise an exception
             response = "Invalid request type"
         return response
 
     def get(self, service, user=None, access=None):
-        # print("GET request " + service)
-        return self.performRequest(
+        return self._perform_request(
             service=service,
             user=user,
             access=access,
@@ -130,9 +123,7 @@ class Api(object):
         ).json()
 
     def postBody(self, service="", body="", user=None, access=None):
-        # print("POST request: " + service)
-        # print("body: " + str(body))
-        return self.performRequest(
+        return self._perform_request(
             service=service,
             user=user,
             access=access,
@@ -142,8 +133,7 @@ class Api(object):
         ).json()
 
     def post(self, service="", user=None, access=None):
-        # print("POST request: " + service)
-        return self.performRequest(
+        return self._perform_request(
             service=service,
             user=user,
             access=access,
@@ -152,9 +142,7 @@ class Api(object):
         ).json()
 
     def put(self, service="", body="", user=None, access=None):
-        # print("POST request: " + service)
-        # print("body: " + str(body))
-        return self.performRequest(
+        return self._perform_request(
             service=service,
             user=user,
             access=access,
@@ -164,8 +152,7 @@ class Api(object):
         ).json()
 
     def delete(self, service="", user=None, access=None):
-        # print("DELETE request: " + service)
-        return self.performRequest(
+        return self._perform_request(
             service=service,
             user=user,
             access=access,
