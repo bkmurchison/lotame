@@ -1,10 +1,9 @@
-from lotame.lotame import Credentials
+from functools import partial
+
 import pytest
 
-try:
-    from unittest.mock import MagicMock
-except:
-    from mock import MagicMock
+from lotame.credentials import Credentials
+from tests.fixtures import client_id, token, access, base_url
 
 
 @pytest.fixture()
@@ -12,83 +11,84 @@ def none_value() -> None:
     return None
 
 
-@pytest.fixture()
-def client_id() -> str:
-    return "clientId"
+def missing_fields_exc_message(*args) -> str:
+    return f"Missing credentials. {','.join(args)} required."
 
 
 @pytest.fixture()
-def token() -> str:
+def client_id_fld():
+    return "client_id"
+
+
+@pytest.fixture()
+def token_fld():
     return "token"
 
 
 @pytest.fixture()
-def access() -> str:
+def access_fld():
     return "access"
 
 
-@pytest.fixture()
-def base_url() -> str:
-    return "base_url"
-
-
-@pytest.fixture()
-def missing_fields_exc_message() -> str:
-    return "Missing credentials. All client_id, token and access are required."
-
-
-def test_credential_no_assignments(missing_fields_exc_message):
-    do_exception_assertion(lambda: Credentials(), missing_fields_exc_message)
+def test_credential_no_assignments(client_id_fld,
+                                   token_fld,
+                                   access_fld):
+    do_exception_assertion(lambda: Credentials(),
+                           missing_fields_exc_message(client_id_fld, token_fld, access_fld))
 
 
 def test_credential_no_assignments_only_client_id_assigned(client_id,
-                                                           missing_fields_exc_message):
-    do_exception_assertion(
-        lambda: Credentials(client_id=client_id),
-        missing_fields_exc_message
-    )
+                                                           token_fld,
+                                                           access_fld):
+    do_exception_assertion(lambda: Credentials(client_id=client_id),
+                           missing_fields_exc_message(token_fld, access_fld))
 
 
 def test_credentials_with_client_id_not_assigned(token,
                                                  access,
                                                  base_url,
-                                                 missing_fields_exc_message):
+                                                 client_id_fld):
     do_exception_assertion(
         lambda: Credentials(token=token, access=access, base_url=base_url),
-        missing_fields_exc_message
+        missing_fields_exc_message(client_id_fld)
     )
 
 
-def test_credential_no_assignments_only_token_assigned(token, missing_fields_exc_message):
+def test_credential_no_assignments_only_token_assigned(token,
+                                                       client_id_fld,
+                                                       access_fld):
     do_exception_assertion(lambda: Credentials(token=token),
-                           missing_fields_exc_message)
+                           missing_fields_exc_message(client_id_fld, access_fld))
 
 
 def test_credentials_with_token_not_assigned(client_id,
                                              access,
                                              base_url,
-                                             missing_fields_exc_message):
+                                             token_fld):
     do_exception_assertion(
         lambda: Credentials(client_id=client_id, access=access, base_url=base_url),
-        missing_fields_exc_message)
+        missing_fields_exc_message(token_fld))
 
 
 def test_credential_no_assignments_only_access_assigned(access,
-                                                        missing_fields_exc_message):
+                                                        client_id_fld,
+                                                        token_fld):
     do_exception_assertion(lambda: Credentials(access=access),
-                           missing_fields_exc_message)
+                           missing_fields_exc_message(client_id_fld, token_fld))
 
 
 def test_credentials_with_access_not_assigned(client_id, token, base_url,
-                                              missing_fields_exc_message):
+                                              access_fld):
     do_exception_assertion(lambda: Credentials(client_id=client_id, token=token, base_url=base_url),
-                           missing_fields_exc_message)
+                           missing_fields_exc_message(access_fld))
 
 
 def test_credential_no_assignments_only_base_url_assigned(base_url,
-                                                          missing_fields_exc_message):
+                                                          client_id_fld,
+                                                          access_fld,
+                                                          token_fld):
     do_exception_assertion(lambda: Credentials(base_url=base_url),
-                           missing_fields_exc_message)
+                           missing_fields_exc_message(client_id_fld, token_fld, access_fld))
 
 
 def do_exception_assertion(func_causing_assertion, err_message) -> None:

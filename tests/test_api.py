@@ -1,10 +1,12 @@
+import json
 import uuid
 from typing import Dict, Any
 from unittest.mock import patch, Mock
 
 import pytest
 
-from lotame.lotame import Credentials, Api
+from lotame.api import Api
+from lotame.credentials import Credentials
 
 
 def create_resp(status_code: int, json_resp: Dict[str, Any]) -> Mock:
@@ -15,8 +17,8 @@ def create_resp(status_code: int, json_resp: Dict[str, Any]) -> Mock:
 
 
 @pytest.fixture()
-def client_id() -> str:
-    return "2967"
+def client_id() -> int:
+    return 2967
 
 
 @pytest.fixture()
@@ -45,7 +47,7 @@ def credentials(client_id, token, access, base_url) -> Credentials:
 def test_init_api_credentials_not_assigned():
     with pytest.raises(Exception) as e:
         Api()
-    assert str(e.value) == "Missing credentials. All client_id, token and access are required."
+    assert str(e.value) == "Missing credentials.  Credentials instance is required."
 
 
 def test_init_api_credentials_assigned(credentials):
@@ -68,7 +70,7 @@ def get_resp_ok(resp_json) -> Mock:
     return create_resp(status_code=200, json_resp=resp_json)
 
 
-@patch('lotame.lotame.requests')
+@patch('lotame.api.requests')
 def test_get_ok(mock_requests, credentials, service, get_resp_ok, resp_json):
     mock_requests.get.return_value = get_resp_ok
     api = Api(credentials)
@@ -77,13 +79,18 @@ def test_get_ok(mock_requests, credentials, service, get_resp_ok, resp_json):
 
 
 @pytest.fixture
-def post_body_req_json() -> Dict[str, Any]:
+def post_body_req_dict() -> Dict[str, Any]:
     return {'data1': 5, 'data2': 'Five', 'data3': 5.0}
 
 
 @pytest.fixture
-def post_body_resp_json(post_body_req_json) -> Dict[str, Any]:
-    return post_body_req_json
+def post_body_req_json(post_body_req_dict) -> str:
+    return json.dumps(post_body_req_dict)
+
+
+@pytest.fixture
+def post_body_resp_json(post_body_req_dict) -> Dict[str, Any]:
+    return post_body_req_dict
 
 
 @pytest.fixture
@@ -91,7 +98,7 @@ def post_body_resp_ok(post_body_resp_json) -> Mock:
     return create_resp(200, post_body_resp_json)
 
 
-@patch('lotame.lotame.requests')
+@patch('lotame.api.requests')
 def test_post_body_ok(mock_requests,
                       credentials,
                       service,
@@ -101,7 +108,7 @@ def test_post_body_ok(mock_requests,
     mock_requests.post.return_value = post_body_resp_ok
 
     api = Api(credentials=credentials)
-    rsp = api.postBody(service=service, body=post_body_req_json)
+    rsp = api.post_body(service=service, body=post_body_req_json)
     assert rsp == post_body_resp_json
 
 
@@ -115,7 +122,7 @@ def post_resp_ok(post_resp_json) -> Mock:
     return create_resp(status_code=200, json_resp=post_resp_json)
 
 
-@patch('lotame.lotame.requests')
+@patch('lotame.api.requests')
 def test_post_ok(mock_requests,
                  credentials,
                  service,
@@ -129,13 +136,18 @@ def test_post_ok(mock_requests,
 
 
 @pytest.fixture
-def put_req_json() -> Dict[str, Any]:
+def put_req_dict() -> Dict[str, Any]:
     return {'data1': 6, 'data2': 'Six', 'data3': 6.0}
 
 
 @pytest.fixture
-def put_resp_json(put_req_json) -> Dict[str, Any]:
-    return put_req_json
+def put_req_json(put_req_dict) -> str:
+    return json.dumps(put_req_dict)
+
+
+@pytest.fixture
+def put_resp_json(put_req_dict) -> Dict[str, Any]:
+    return put_req_dict
 
 
 @pytest.fixture
@@ -143,7 +155,7 @@ def put_resp_ok(put_resp_json) -> Mock:
     return create_resp(200, put_resp_json)
 
 
-@patch('lotame.lotame.requests')
+@patch('lotame.api.requests')
 def test_put_ok(mock_requests,
                 credentials,
                 service,
@@ -167,7 +179,7 @@ def delete_resp_ok(delete_resp_json) -> Mock:
     return create_resp(status_code=200, json_resp=delete_resp_json)
 
 
-@patch('lotame.lotame.requests')
+@patch('lotame.api.requests')
 def test_delete_ok(mock_requests,
                    credentials,
                    service,

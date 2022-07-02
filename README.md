@@ -1,41 +1,46 @@
-[![Build Status](https://travis-ci.org/paulokuong/lotame.svg?branch=master)](https://travis-ci.org/paulokuong/lotame)[![Coverage Status](https://coveralls.io/repos/github/paulokuong/lotame/badge.svg?branch=master)](https://coveralls.io/github/paulokuong/lotame?branch=master)
 Lotame API Wrapper
 ==================
 
 Requirements
 ------------
 
-* Python 3.7.0
+* Python 3.8.0
 
 Installation
 ------------
-```
+```shell
     pip install lotame
 ```
 
 Goal
 ----
 
-To provide a generic wrapper Lotame API
+To provide a generic wrapper Lotame API?
 
 Code sample
 -----------
 
-### Getting api object:
 ```python
-  from lotame import Api, Credentials, FirehoseService, BehaviorService
-  api = Api(Credentials(client_id='xxx', token='yyy', access='zzz'))
-```
+from lotame.api import Api
+from lotame.credentials import Credentials
+from lotame.services.audience import AudienceService
+from lotame.services.behavior import BehaviorService
+from lotame.services.firehose import FirehoseService
 
-### Using different service classes for different endpoints:
-```python
-  fs = FirehoseService(api=api)
-  updates = fs.getUpdates(hours=1)
-```
+# Getting api object:
 
-```python
-  b = BehaviorService(api=api)
-  b.get('types')
+api = Api(Credentials(client_id='xxx', token='yyy', access='zzz'))
+
+# Using different service classes for different endpoints:
+
+f = FirehoseService(api=api)
+updates = f.get_updates(hours=1)
+
+b = BehaviorService(api=api)
+types = b.get('types')
+
+a = AudienceService(api=api)
+audiences = a.get('audience')
 ```
 
 
@@ -43,3 +48,4 @@ Contributors
 ------------
 
 * Paulo Kuong ([@pkuong](https://github.com/paulokuong))
+* Bryant K Murchison ([@bkmurchison](https://github.com/bkmurchison))
