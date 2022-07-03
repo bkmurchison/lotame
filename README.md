@@ -4,7 +4,7 @@ Lotame API Wrapper
 Requirements
 ------------
 
-* Python 3.8.0
+* Python 3.8
 
 Installation
 ------------
@@ -48,4 +48,4 @@ Contributors
 ------------
 
 * Paulo Kuong ([@pkuong](https://github.com/paulokuong))
-* Bryant K Murchison ([@bkmurchison](https://github.com/bkmurchison))
+* BK Murchison ([@bkmurchison](https://github.com/bkmurchison))

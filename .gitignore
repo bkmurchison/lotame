@@ -5,6 +5,7 @@ dist/
 lotame.egg-info/
 lotame/__pycache__/
 tests/__pycache__/
+**/__pycache__/
 
 .coverage
 .python-version

@@ -5,23 +5,25 @@ with open('README.rst') as file:
     long_description = file.read()
 
 setup(name='lotame',
-      version='2.0.0',
+      version='3.0.0',
       description='Simple python wrapper for LOTAME API',
       install_requires=[
           'httplib2==0.10.3',
-          'urllib3>=1.23',
-          'requests==2.21.0'
+          'urllib3>=1.23,<1.27',
+          'requests==2.28.1'
       ],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'License :: OSI Approved :: MIT License',
-          'Programming Language :: Python :: 3.6'
+          'Programming Language :: Python :: 3.8'
       ],
       keywords=(
           'lotame python wrapper client audience behavior api sdk'),
-      url='https://github.com/paulokuong/lotame',
+      url='https://github.com/bkmurchison/lotame',
       author='Paulo Kuong',
       author_email='paulo.kuong@gmail.com',
+      maintainer='BK Murchison',
+      maintainer_email='bryant.k.murchison@devtelligent.com',
       license='MIT',
       packages=find_packages(),
       include_package_data=True,
