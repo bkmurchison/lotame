@@ -99,7 +99,7 @@ class Api(object):
         return(headers)
 
     def performRequest(
-            self, service="", user=None, access=None, type=None, headers=None,
+            self, service="", user=None, access=None, type=None, headers={},
             body=None):
         response = ""
         full_headers = self.mergeHeaders(headers)

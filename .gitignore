@@ -2,6 +2,7 @@ build/
 dist/
 lotame.egg-info/
 **/__pycache__/
+.coverage
 .idea
 .vscode
 .python-version
