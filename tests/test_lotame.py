@@ -941,3 +941,23 @@ def test_get_updates_defaulted_args(
     firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdatesForFeeds.has_calls(
         updates_for_feeds_calls
     )
+
+
+@pytest.fixture()
+def since_ts():
+    return datetime.datetime.utcnow().timestamp()
+
+
+def test_get_updates_with_since(
+        firehose_svc_get_feeds_get_updates_for_feeds_mocked,
+        feed_0_data,
+        since_ts,
+        api_get_updates_response_feed_0
+):
+    rsp = firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdates()
+    assert rsp == api_get_updates_response_feed_0
+
+    updates_for_feeds_calls = [call([feed_0_data], {"since": since_ts})]
+    firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdatesForFeeds.has_calls(
+        updates_for_feeds_calls
+    )
