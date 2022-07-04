@@ -4,10 +4,12 @@ To be implemented.
 from __future__ import absolute_import
 from __future__ import print_function
 
+import datetime
 import itertools
 import json
+import math
 from unittest.mock import patch, call
-from lotame.lotame import Credentials, Api
+from lotame.lotame import Credentials, Api, FirehoseService
 import pytest
 import requests
 
@@ -632,3 +634,310 @@ def test_delete(mock_perform_request,
                   type=Api.REQUEST_DELETE,
                   headers=Api.DEFAULT_JSON_RECEIVE_HEADER)]
     mock_perform_request.assert_has_calls(calls)
+
+
+def test_firehose_service_init_defaulted_args():
+    with pytest.raises(Exception):
+        FirehoseService()
+
+
+@pytest.fixture()
+def mock_api():
+    with patch('lotame.lotame.Api') as api:
+        yield api
+
+
+def test_firehose_service_init_with_api_arg(mock_api):
+    svc = FirehoseService(mock_api)
+    assert svc.api == mock_api
+
+
+@pytest.fixture()
+def api_build_url_return_value():
+    return "https://domain/this/is/a/path"
+
+
+@pytest.fixture()
+def mock_api_build_url(mock_api, api_build_url_return_value):
+    mock_api.buidUrl.return_value = api_build_url_return_value
+    return mock_api
+
+
+@pytest.fixture()
+def feed_0_data():
+    return {'id': 1234}
+
+
+@pytest.fixture()
+def feed_1_data():
+    return {'id': 3456}
+
+
+@pytest.fixture()
+def api_get_feeds_data(feed_0_data, feed_1_data):
+    return [feed_0_data, feed_1_data]
+
+
+@pytest.fixture()
+def api_get_feeds_response(api_get_feeds_data):
+    return {'feeds': api_get_feeds_data}
+
+
+@pytest.fixture()
+def mock_api_get_feeds(mock_api_build_url, api_get_feeds_response):
+    mock_api_build_url.get.return_value = api_get_feeds_response
+    return mock_api_build_url
+
+
+def test_get_feeds_defaulted_args(mock_api_get_feeds, api_get_feeds_data):
+    rsp = FirehoseService(mock_api_get_feeds).getFeeds()
+    assert rsp == api_get_feeds_data
+
+    build_url_calls = [call(FirehoseService.FIREHOSE_FEEDS, {})]
+    mock_api_get_feeds.buildUrl.assert_has_calls(build_url_calls)
+
+    get_feeds_calls = [call(mock_api_get_feeds.buildUrl.return_value)]
+    mock_api_get_feeds.get.assert_has_calls(get_feeds_calls)
+
+
+@pytest.fixture()
+def expiration():
+    return math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+
+
+@pytest.fixture()
+def api_get_updates_response(feed_0_data, feed_1_data, expiration):
+    return {
+        "feeds": [
+            {"id": feed_0_data["id"],
+             "location": "https://a/feed0/location/here",
+             "metaDataFile": "file://a/feed0/metaDataFile/here",
+             "files": ["file00", "file01"]
+             },
+            {"id": feed_1_data["id"],
+             "location": "https://a/feed1/location/here",
+             "metaDataFile": "file://a/feed1/metaDataFile/here",
+             "files": ["file10", "file11"]
+             },
+        ],
+        "s3creds": {
+            "accessKeyId": "accessKeyId",
+            "secretAccessKey": "secretAccessKey",
+            "sessionToken": "sessionToken",
+            "expiration": expiration
+
+        }
+    }
+
+
+@pytest.fixture()
+def api_get_updates_for_feeds_response(feed_0_data, feed_1_data, expiration):
+    return [{"feeds": [{"id": feed_0_data["id"],
+                        "location": "https://a/feed0/location/here",
+                        "metaDataFile": "file://a/feed0/metaDataFile/here",
+                        "files": ["file00", "file01"]
+                        },
+                       ],
+             "s3creds": {"accessKeyId": "accessKeyId",
+                         "secretAccessKey": "secretAccessKey",
+                         "sessionToken": "sessionToken",
+                         "expiration": expiration
+                         }
+             },
+            {"feeds": [{"id": feed_1_data["id"],
+                        "location": "https://a/feed1/location/here",
+                        "metaDataFile": "file://a/feed1/metaDataFile/here",
+                        "files": ["file10", "file11"]
+                        },
+                       ],
+             "s3creds": {"accessKeyId": "accessKeyId",
+                         "secretAccessKey": "secretAccessKey",
+                         "sessionToken": "sessionToken",
+                         "expiration": expiration
+                         }
+             }
+            ]
+
+@pytest.fixture()
+def mock_api_get_updates_for_feed(mock_api_build_url,
+                                  api_get_updates_response):
+    mock_api_build_url.get.return_value = api_get_updates_response
+    return mock_api_build_url
+
+
+def test_get_updates_for_feed_defaulted_args(mock_api_get_updates_for_feed,
+                                             api_get_updates_response):
+    rsp = FirehoseService(mock_api_get_updates_for_feed).getUpdatesForFeed()
+    assert rsp == api_get_updates_response
+
+    build_url_calls = [call(FirehoseService.FIREHOSE_UPDATES,
+                            {FirehoseService.FEED_ID: 0})]
+    mock_api_get_updates_for_feed.buildUrl.assert_has_calls(build_url_calls)
+
+    build_get_calls = [call(mock_api_get_updates_for_feed.buildUrl.return_value)]
+    mock_api_get_updates_for_feed.get.assert_has_calls(build_get_calls)
+
+
+def test_get_updates_for_feed_params_provided(mock_api_get_updates_for_feed,
+                                              api_get_updates_response,
+                                              param_0_key,
+                                              param_0_val):
+    params_in = {param_0_key: param_0_val}
+    expected_build_url_params = {FirehoseService.FEED_ID: 0}
+    expected_build_url_params.update(params_in)
+
+    rsp = FirehoseService(mock_api_get_updates_for_feed).getUpdatesForFeed(params=params_in)
+    assert rsp == api_get_updates_response
+
+    build_url_calls = [call(FirehoseService.FIREHOSE_UPDATES,
+                            expected_build_url_params)]
+    mock_api_get_updates_for_feed.buildUrl.assert_has_calls(build_url_calls)
+
+    build_get_calls = [call(mock_api_get_updates_for_feed.buildUrl.return_value)]
+    mock_api_get_updates_for_feed.get.assert_has_calls(build_get_calls)
+
+
+@pytest.fixture()
+def api_get_updates_response_feed_0(feed_0_data, expiration):
+    return {
+        "feeds": [
+            {"id": feed_0_data["id"],
+             "location": "https://a/feed0/location/here",
+             "metaDataFile": "file://a/feed0/metaDataFile/here",
+             "files": ["file00", "file01"]
+             },
+        ],
+        "s3creds": {
+            "accessKeyId": "accessKeyId",
+            "secretAccessKey": "secretAccessKey",
+            "sessionToken": "sessionToken",
+            "expiration": expiration
+        }
+    }
+
+
+@pytest.fixture()
+def api_get_updates_response_feed_1(feed_1_data, expiration):
+    return {
+        "feeds": [
+            {"id": feed_1_data["id"],
+             "location": "https://a/feed1/location/here",
+             "metaDataFile": "file://a/feed1/metaDataFile/here",
+             "files": ["file10", "file11"]
+             },
+        ],
+        "s3creds": {
+            "accessKeyId": "accessKeyId",
+            "secretAccessKey": "secretAccessKey",
+            "sessionToken": "sessionToken",
+            "expiration": expiration
+        }
+    }
+
+
+@pytest.fixture()
+def mock_api_get_updates_for_feed_1(mock_api_build_url,
+                                    api_get_updates_response_feed_0,
+                                    api_get_updates_response_feed_1):
+    mock_api_build_url.get.side_effect = [api_get_updates_response_feed_0,
+                                          api_get_updates_response_feed_1]
+    return mock_api_build_url
+
+
+def test_get_updates_for_feed_args_provided(mock_api_get_updates_for_feed,
+                                            api_get_updates_response,
+                                            param_0_key,
+                                            param_0_val,
+                                            feed_1_data):
+    feed_id = feed_1_data["id"]
+    params_in = {param_0_key: param_0_val}
+    expected_build_url_params = {FirehoseService.FEED_ID: feed_id}
+    expected_build_url_params.update(params_in)
+
+    rsp = FirehoseService(mock_api_get_updates_for_feed).getUpdatesForFeed(feed_id=feed_id,
+                                                                           params=params_in)
+    assert rsp == api_get_updates_response
+
+    build_url_calls = [call(FirehoseService.FIREHOSE_UPDATES,
+                            expected_build_url_params)]
+    mock_api_get_updates_for_feed.buildUrl.assert_has_calls(build_url_calls)
+
+    build_get_calls = [call(mock_api_get_updates_for_feed.buildUrl.return_value)]
+    mock_api_get_updates_for_feed.get.assert_has_calls(build_get_calls)
+
+
+@pytest.fixture()
+def firehose_service_with_mock_get_updates_for_feed_no_feeds(mock_api):
+    svc = FirehoseService(mock_api)
+    svc.getUpdatesForFeed = MagicMock()
+    return svc
+
+
+def test_get_updates_for_feeds_defaulted_args(
+        firehose_service_with_mock_get_updates_for_feed_no_feeds
+):
+    rsp = firehose_service_with_mock_get_updates_for_feed_no_feeds.getUpdatesForFeeds()
+    assert rsp == []
+
+    firehose_service_with_mock_get_updates_for_feed_no_feeds.getUpdatesForFeed.assert_not_called()
+
+
+@pytest.fixture()
+def firehose_service_with_mock_get_updates_for_feed(
+        mock_api,
+        api_get_updates_response_feed_0,
+        api_get_updates_response_feed_1):
+    svc = FirehoseService(mock_api)
+    svc.getUpdatesForFeed = MagicMock()
+    svc.getUpdatesForFeed.side_effect = [api_get_updates_response_feed_0,
+                                         api_get_updates_response_feed_1]
+    return svc
+
+
+def test_get_updates_for_feeds(
+        firehose_service_with_mock_get_updates_for_feed,
+        api_get_updates_for_feeds_response,
+        param_0_key,
+        param_0_val,
+        feed_1_data,
+        feed_0_data):
+    feeds = [feed_0_data, feed_1_data]
+
+    params_in = {param_0_key: param_0_val}
+
+    rsp = firehose_service_with_mock_get_updates_for_feed.getUpdatesForFeeds(feeds=feeds,
+                                                                             params=params_in)
+    assert rsp == api_get_updates_for_feeds_response
+
+    updates_for_feeds_calls = [call(feed_0_data["id"], params_in),
+                               call(feed_1_data["id"], params_in)]
+    firehose_service_with_mock_get_updates_for_feed.getUpdatesForFeed.assert_has_calls(
+        updates_for_feeds_calls
+    )
+
+
+@pytest.fixture()
+def firehose_svc_get_feeds_get_updates_for_feeds_mocked(mock_api,
+                                                        feed_0_data,
+                                                        api_get_updates_response_feed_0):
+    svc = FirehoseService(mock_api)
+    svc.getFeeds = MagicMock()
+    svc.getFeeds.return_value = [feed_0_data]
+
+    svc.getUpdatesForFeeds = MagicMock()
+    svc.getUpdatesForFeeds.return_value = api_get_updates_response_feed_0
+    return svc
+
+
+def test_get_updates_defaulted_args(
+        firehose_svc_get_feeds_get_updates_for_feeds_mocked,
+        feed_0_data,
+        api_get_updates_response_feed_0
+):
+    rsp = firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdates()
+    assert rsp == api_get_updates_response_feed_0
+
+    updates_for_feeds_calls = [call([feed_0_data], {})]
+    firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdatesForFeeds.has_calls(
+        updates_for_feeds_calls
+    )
