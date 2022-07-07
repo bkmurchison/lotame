@@ -98,12 +98,16 @@ def test_api(mock_credentials):
 
 def test_api_defaulted_credentials():
     with pytest.raises(Exception) as e:
-        api = Api()
+        Api()
 
 
 def test_populate_url_params_defaulted_args(mock_credentials):
     url_params = Api(mock_credentials).populateUrlParams()
-    assert url_params == "?="
+    # TODO: FIX THIS TEST.
+    #   determine whether populateUrlParams when provided no
+    #   arguments should return either "?" or "".  Test is
+    #   currently using "".
+    assert url_params == ""
 
 
 @pytest.fixture()
@@ -116,7 +120,11 @@ def test_populate_url_params_url_assigned_no_symbols(
         url_no_symbols
 ):
     url_params = Api(mock_credentials).populateUrlParams(url_no_symbols)
-    assert url_params == url_no_symbols + "?="
+    # TODO: FIX THIS TEST.
+    #   determine whether populateUrlParams when provided a URL with
+    #   no "?" should return either "{URL}?" or "{URL}".
+    #   Test is currently using "{URL}".
+    assert url_params == url_no_symbols
 
 
 @pytest.fixture()
@@ -171,6 +179,20 @@ def param_1_str(param_0_key, param_0_val):
 @pytest.fixture()
 def url_has_q_mark(url_no_symbols, param_0_str):
     return f"{url_no_symbols}?{param_0_str}"
+
+
+def test_populate_url_params_url_assigned_has_q_mark_no_params(
+        mock_credentials,
+        url_has_q_mark,
+):
+    url_with_params = Api(mock_credentials).populateUrlParams(url_has_q_mark)
+    # TODO: FIX THIS TEST.
+    #   determine if populateUrlParams when provided no
+    #   arguments should return "{URL_with_?_params}" or
+    #   "{URL_with_?_params}&".
+    #   Test is currently using "{URL_with_?_params}"
+    assert url_has_q_mark in url_with_params
+    assert "&" not in url_with_params
 
 
 def test_populate_url_params_url_assigned_has_q_mark(
