@@ -201,8 +201,10 @@ def mocked_credentials_with_client_id_and_default_base_url(mock_credentials,
     return mock_credentials
 
 
-def test_build_url_defaulted_args(mocked_credentials_with_client_id_and_default_base_url,
-                                  a_client_id):
+def test_build_url_defaulted_args(
+        mocked_credentials_with_client_id_and_default_base_url,
+        a_client_id
+):
     url = Api(mocked_credentials_with_client_id_and_default_base_url).buildUrl()
     assert url == ""
 
@@ -212,9 +214,11 @@ def a_service():
     return "/a/service"
 
 
-def test_build_url_with_service_only(mocked_credentials_with_client_id_and_default_base_url,
-                                     a_client_id,
-                                     a_service):
+def test_build_url_with_service_only(
+        mocked_credentials_with_client_id_and_default_base_url,
+        a_client_id,
+        a_service
+):
     exp_client_id_str = params_as_str("client_id", a_client_id)
 
     url = Api(mocked_credentials_with_client_id_and_default_base_url).buildUrl(service=a_service)
@@ -226,26 +230,33 @@ def param_0_as_dict(param_0_key, param_0_val):
     return {param_0_key: param_0_val}
 
 
-def test_build_url_with_params_only(mocked_credentials_with_client_id_and_default_base_url,
-                                    a_client_id,
-                                    param_0_as_dict,
-                                    param_0_str):
+def test_build_url_with_params_only(
+        mocked_credentials_with_client_id_and_default_base_url,
+        a_client_id,
+        param_0_as_dict,
+        param_0_str
+):
     url = Api(mocked_credentials_with_client_id_and_default_base_url).buildUrl(params=param_0_as_dict)
     assert url == ""
 
 
-def test_build_url_with_service_and_params(mocked_credentials_with_client_id_and_default_base_url,
-                                           a_client_id,
-                                           a_service,
-                                           param_0_as_dict,
-                                           param_0_str):
+def test_build_url_with_service_and_params(
+        mocked_credentials_with_client_id_and_default_base_url,
+        a_client_id,
+        a_service,
+        param_0_as_dict,
+        param_0_str
+):
     exp_client_id_str = params_as_str("client_id", a_client_id)
 
     url = Api(mocked_credentials_with_client_id_and_default_base_url).buildUrl(
         service=a_service,
         params=param_0_as_dict
     )
-    assert url == f"{Credentials.DEFAULT_BASE_URL}{a_service}?{exp_client_id_str}&{param_0_str}"
+    assert(
+        url
+        == f"{Credentials.DEFAULT_BASE_URL}{a_service}?{exp_client_id_str}&{param_0_str}"
+    )
 
 
 @pytest.fixture()
@@ -257,7 +268,8 @@ def param_with_list_value_as_dict(param_0_key,
 
 @pytest.fixture()
 def param_with_list_value_as_str(param_with_list_value_as_dict):
-    param_strs = [[f"{k}={v}" for v in vs] for k, vs in param_with_list_value_as_dict.items()]
+    param_strs = [[f"{k}={v}" for v in vs]
+                  for k, vs in param_with_list_value_as_dict.items()]
     flat_param_strs = list(itertools.chain(*param_strs))
     return "&".join(flat_param_strs)
 
@@ -305,7 +317,9 @@ def mock_credentials_with_token_and_access(mock_credentials,
     return mock_credentials
 
 
-def test_headers_no_base_headers_provided(mock_credentials_with_token_and_access):
+def test_headers_no_base_headers_provided(
+        mock_credentials_with_token_and_access
+):
     headers = Api(mock_credentials_with_token_and_access).mergeHeaders({})
 
     assert len(headers) == 2
@@ -702,7 +716,9 @@ def test_get_feeds_defaulted_args(mock_api_get_feeds, api_get_feeds_data):
 
 @pytest.fixture()
 def expiration():
-    return math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+    return math.floor(
+        datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000
+    )
 
 
 @pytest.fixture()
@@ -758,15 +774,20 @@ def api_get_updates_for_feeds_response(feed_0_data, feed_1_data, expiration):
              }
             ]
 
+
 @pytest.fixture()
-def mock_api_get_updates_for_feed(mock_api_build_url,
-                                  api_get_updates_response):
+def mock_api_get_updates_for_feed(
+        mock_api_build_url,
+        api_get_updates_response
+):
     mock_api_build_url.get.return_value = api_get_updates_response
     return mock_api_build_url
 
 
-def test_get_updates_for_feed_defaulted_args(mock_api_get_updates_for_feed,
-                                             api_get_updates_response):
+def test_get_updates_for_feed_defaulted_args(
+        mock_api_get_updates_for_feed,
+        api_get_updates_response
+):
     rsp = FirehoseService(mock_api_get_updates_for_feed).getUpdatesForFeed()
     assert rsp == api_get_updates_response
 
@@ -778,10 +799,12 @@ def test_get_updates_for_feed_defaulted_args(mock_api_get_updates_for_feed,
     mock_api_get_updates_for_feed.get.assert_has_calls(build_get_calls)
 
 
-def test_get_updates_for_feed_params_provided(mock_api_get_updates_for_feed,
-                                              api_get_updates_response,
-                                              param_0_key,
-                                              param_0_val):
+def test_get_updates_for_feed_params_provided(
+        mock_api_get_updates_for_feed,
+        api_get_updates_response,
+        param_0_key,
+        param_0_val
+):
     params_in = {param_0_key: param_0_val}
     expected_build_url_params = {FirehoseService.FEED_ID: 0}
     expected_build_url_params.update(params_in)
@@ -836,19 +859,23 @@ def api_get_updates_response_feed_1(feed_1_data, expiration):
 
 
 @pytest.fixture()
-def mock_api_get_updates_for_feed_1(mock_api_build_url,
-                                    api_get_updates_response_feed_0,
-                                    api_get_updates_response_feed_1):
+def mock_api_get_updates_for_feed_1(
+        mock_api_build_url,
+        api_get_updates_response_feed_0,
+        api_get_updates_response_feed_1
+):
     mock_api_build_url.get.side_effect = [api_get_updates_response_feed_0,
                                           api_get_updates_response_feed_1]
     return mock_api_build_url
 
 
-def test_get_updates_for_feed_args_provided(mock_api_get_updates_for_feed,
-                                            api_get_updates_response,
-                                            param_0_key,
-                                            param_0_val,
-                                            feed_1_data):
+def test_get_updates_for_feed_args_provided(
+        mock_api_get_updates_for_feed,
+        api_get_updates_response,
+        param_0_key,
+        param_0_val,
+        feed_1_data
+):
     feed_id = feed_1_data["id"]
     params_in = {param_0_key: param_0_val}
     expected_build_url_params = {FirehoseService.FEED_ID: feed_id}
@@ -917,9 +944,11 @@ def test_get_updates_for_feeds(
 
 
 @pytest.fixture()
-def firehose_svc_get_feeds_get_updates_for_feeds_mocked(mock_api,
-                                                        feed_0_data,
-                                                        api_get_updates_response_feed_0):
+def firehose_svc_get_feeds_get_updates_for_feeds_mocked(
+        mock_api,
+        feed_0_data,
+        api_get_updates_response_feed_0
+):
     svc = FirehoseService(mock_api)
     svc.getFeeds = MagicMock()
     svc.getFeeds.return_value = [feed_0_data]
@@ -954,10 +983,74 @@ def test_get_updates_with_since(
         since_ts,
         api_get_updates_response_feed_0
 ):
-    rsp = firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdates()
+    rsp = firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdates(since=since_ts)
     assert rsp == api_get_updates_response_feed_0
 
     updates_for_feeds_calls = [call([feed_0_data], {"since": since_ts})]
+    firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdatesForFeeds.has_calls(
+        updates_for_feeds_calls
+    )
+
+
+def reduce_datetime(dt: datetime.datetime,
+                    td: datetime.timedelta) -> datetime.datetime:
+    return dt - td
+
+
+@pytest.fixture()
+def curr_time() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+@pytest.fixture()
+def hrs_ago():
+    return 1
+
+
+@pytest.fixture()
+def hours_ago_ts(curr_time, hrs_ago):
+    return reduce_datetime(curr_time, datetime.timedelta(hours=1))
+
+
+def test_get_updates_with_hours(
+        firehose_svc_get_feeds_get_updates_for_feeds_mocked,
+        feed_0_data,
+        hrs_ago,
+        hours_ago_ts,
+        api_get_updates_response_feed_0
+):
+    rsp = firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdates(hours=hrs_ago)
+    assert rsp == api_get_updates_response_feed_0
+
+    updates_for_feeds_calls = [call([feed_0_data], {"since": hours_ago_ts})]
+    firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdatesForFeeds.has_calls(
+        updates_for_feeds_calls
+    )
+
+
+@pytest.fixture()
+def minutes_ago():
+    return 30
+
+
+@pytest.fixture()
+def minutes_ago_ts(curr_time, minutes_ago):
+    return reduce_datetime(curr_time, datetime.timedelta(minutes=minutes_ago))
+
+
+def test_get_updates_with_minutes(
+        firehose_svc_get_feeds_get_updates_for_feeds_mocked,
+        feed_0_data,
+        minutes_ago,
+        minutes_ago_ts,
+        api_get_updates_response_feed_0
+):
+    rsp = firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdates(
+        minutes=minutes_ago
+    )
+    assert rsp == api_get_updates_response_feed_0
+
+    updates_for_feeds_calls = [call([feed_0_data], {"since": minutes_ago_ts})]
     firehose_svc_get_feeds_get_updates_for_feeds_mocked.getUpdatesForFeeds.has_calls(
         updates_for_feeds_calls
     )
