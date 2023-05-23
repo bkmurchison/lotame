@@ -10,7 +10,7 @@ setup(name='lotame',
       install_requires=[
           'httplib2==0.19.0',
           'urllib3>=1.23,<1.27',
-          'requests==2.28.1'
+          'requests==2.31.0'
       ],
       classifiers=[
           'Development Status :: 3 - Alpha',
